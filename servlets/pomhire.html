@@ -1,0 +1,118 @@
+<html>
+<head> 
+<title>pomhire</title>
+<style>
+
+.fill {
+    width: 100%;
+    height: 100%;
+}
+
+table {
+    border-collapse: collapse;
+}
+th, td {
+    padding: 0;
+}
+    
+body {
+    margin: 0px;
+}
+
+</style>
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-3118247-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+</head>
+<body>
+
+<script src="/jquery.js"></script>
+<script src="/myutil.js"></script>
+<script src="/hashchange.js"></script>
+<script src="/tab.js"></script>
+<script src="/slider.js"></script>
+<script>
+
+function drawMain() {
+    var d = $('<div style="border-radius:15px;background:rgb(240,240,255); padding:20px;margin-left:auto;margin-right:auto;width:500px;margin-top:30px"/>')
+    
+    d.append($('<h3/>').html('Pomodoro Hiring &nbsp;<img src="tomato.png" style="position:relative;top:5px"></img>&nbsp; Experiment'))
+    
+    var s = $('#words').text()
+    s = s.replace(/\-\-/g, '\u2014')
+    s = s.replace(/\[\[(.*?) (\S+?)\]\]/g, function (g0, g1, g2) {
+        return '<a href="' + g2 + '">' + g1 + '</a>'
+    })
+    s = s.replace(/##signup##/, '<span id="signup"></span>')
+    s = map(filter(lines(s), function (s) { return s }), function (s) {
+        if (s.match(/^\*/)) {
+            return '<ul><li>' + s.slice(2) + '</li></ul>'
+        } else {
+            return '<p>' + s + '</p>'
+        }
+    }).join('')
+    d.append($('<div/>').html(s))
+    
+    var dd = $('<span/>')
+    dd.append($('<input type="text" value="enter e-mail address"></input>').click(function () {
+        $(this).select()
+    }))
+    dd.append($('<button>submit</button>').click(function () {
+        var s = dd.find('input').val()
+        
+        if (!s.match(/@/)) {
+            alert("Please provide an e-mail address, thanks!")
+            return
+        }
+        
+        dd.empty().append($('<span/>').text('Submitting...'))
+        $.post(window.location.url, { s : s }, function () {
+            dd.empty().append($('<span/>').html('Submitted. Thanks again. We\'ll let you know when the experiment is ready.'))
+        })
+    }))
+    d.find('#signup').append(dd)
+    
+    d.append($('<div/>').text('Thanks!'))
+    d.append($('<div/>').text('Greg'))
+
+    return d
+}
+
+$(function () {
+    params = getUrlParams()
+    
+    $('body').ajaxError(function (_, x) {
+        alert("error: " + x.responseText)
+    })
+    
+    $('body').append(drawMain())
+})
+
+</script>
+
+<pre id="words" style="display:none">
+Hello,
+
+I am [[Greg Little http://glittle.org]], a [[researcher at oDesk https://www.odesk.com/info/l/research/]], and before that I was a [[grad student at MIT researching crowdsourcing on Mechanical Turk http://groups.csail.mit.edu/uid/research.shtml#crowdcomp]].
+
+This is a research experiment to explore a form of real-time expertise hiring -- [[pomodoro http://en.wikipedia.org/wiki/Pomodoro_Technique]] hiring -- where people hire experts in 20 minute chunks. For example, someone might hire an expert to help write a JavaScript utility function, plot some data, or sketch a cartoon.
+
+If you're interested in participating (as an expert or requester):
+
+* ##signup##
+* Please share this link, so we can get a good pool of experts for the experiment.
+</pre>
+
+</body>
+</html>
+

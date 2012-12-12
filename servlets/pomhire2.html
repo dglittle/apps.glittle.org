@@ -1,0 +1,356 @@
+<html>
+<head> 
+<title>pomhire</title>
+<link rel="stylesheet" type="text/css" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.21/themes/base/jquery-ui.css">
+<style>
+
+.fill {
+    width: 100%;
+    height: 100%;
+}
+
+table {
+    border-collapse: collapse;
+}
+th, td {
+    padding: 0;
+}
+    
+body {
+    margin: 0px;
+}
+
+</style>
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-3118247-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+</head>
+<body>
+
+loading...
+
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.21/jquery-ui.min.js"></script>
+
+<script src="/myutil.js"></script>
+<script src="/hashchange.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+
+function notifyUser(msg) {
+    setTimeout(function () {
+        if (!hasFocus && db.users[db.me]._alerts) {
+            alert(msg + '\n\nNOTE: you can turn these alerts off in your settings.')
+        }
+    }, 0)
+}
+
+function openEditUser(user) {
+    var d = $('<div style="margin:20px;width:350px"/>')
+    
+    d.append($('<input style="width:100%;" class="name" type="text" placeholder="name" />').val(user.name))
+    d.append($('<br/>'))
+    
+    d.append($('<input style="width:100%;margin-top:20px" class="skills" type="text" placeholder="skills" />').val(user.skills))
+    d.append($('<br/>'))
+    
+    d.append($('<input style="width:100%;margin-top:20px" class="img" type="text" placeholder="image url" />').val(user.img))
+    d.append($('<br/>'))
+    
+    var a
+    d.append(a = $('<input style="margin-top:20px" class="available" type="checkbox" />').prop('checked', user.available || false))
+    a.addLabel('Available')
+    d.append($('<br/>'))
+    
+    var a
+    d.append(a = $('<input style="margin-top:20px" class="alerts" type="checkbox" />').prop('checked', user._alerts || false))
+    a.addLabel('Show popup alerts when stuff happens')
+    d.append($('<br/>'))
+    
+    d.append($('<button style="margin-top:20px"/>').text('ok').click(function () {
+        user.name = d.find('.name').val()
+        user.skills = d.find('.skills').val()
+        user.img = d.find('.img').val()
+        user.available = d.find('.available').prop('checked')
+        user._alerts = d.find('.alerts').prop('checked')
+        socket.emit('update', {
+            cmd : 'update user',
+            user : user
+        }, function () {
+            closeDialog()
+        })
+    }))
+    d.append($('<button style="margin-left:20px"/>').text('cancel').click(function () {
+        closeDialog()
+    }))
+    openDialog(d)
+}
+
+function drawUsers(users) {
+    function drawUser(user) {
+        var d = $('<div style="margin:10px;padding:10px;width:300px;border-radius:10px;border:1px solid white;cursor:pointer"/>')
+        
+        var dd = $('<div style="float:left;margin-right:10px" />')
+        if (user.img) {
+            var i = $('<img/>').attr('src', user.img)
+            i.myCss('max-width:32px;max-height:32px;')
+            dd.append(i)
+            dd.myCss('width:32px;height:32px')
+        } else {
+            dd.myCss('width:30px;height:30px;border:1px solid black')
+        }
+        d.append(dd)
+        
+        var r = $('<div style="float:left"/>')
+        r.append(dd = $('<div style="font-weight:bold"/>').text(user.name))
+        if (user.key == db.me) {
+            dd.append($('<span style="margin-left:10px;font-size:small;font-weight:normal;color:blue;"/>').text('you - click to edit'))
+        }
+        r.append($('<div style="color:grey"/>').text(user.skills))
+        r.append(dd = $('<div style=""/>').text(user.available ? "available" : keys(user.chats).length > 0 ? "chatting" : "not available"))
+        if (user.key == db.me) {
+            dd.append($('<span style="margin-left:10px;font-size:small;font-weight:normal;color:blue;"/>').text(user.available ? 'become unavailable' : 'become available').click(function () {
+                socket.emit('update', {
+                    cmd : 'update user',
+                    user : { key : user.key, available : !user.available }
+                })
+                return false
+            }))
+        }
+        d.append(r)
+        d.append($('<div style="clear:both"/>'))
+        
+        if (user.key == db.me || user.available) {
+            d.myHover('background:lightgrey;border:1px solid black')
+            d.click(function () {
+                if (user.key == db.me) {
+                    openEditUser(user)
+                } else if (user.available) {
+                    var users = {}
+                    users[db.me] = true
+                    users[user.key] = true
+                    socket.emit('update', {
+                        cmd : 'new chat',
+                        users : users
+                    })
+                }
+            })
+        } else {
+            d.click(function () {
+                alert('sorry, this person is unavailable')
+            })
+        }
+        
+        return d
+    }
+    
+    var d = $('<div/>')
+    
+    var us = []
+    foreach(users, function (u) {
+        if (u.online) {
+            us.push(u)
+        }
+    })
+    sort(us, function (u) {
+        if (u.key == db.me) {
+            return -1
+        } else if (u.available) {
+            return 1 / u.lastOnline
+        } else {
+            return 1 + 1 / u.lastOnline
+        }
+    })
+    foreach(us, function (u) {
+        d.append(drawUser(u))
+    })
+    return d
+}
+
+g_chatSizes = {}
+
+function redrawChat(chat) {
+    var d = $('.' + chat.key)
+    if (d.length == 0) {
+        d = $('<div/>').addClass(chat.key).dialog({
+            title : 'Chat',
+            close : function(event, ui) {
+                socket.emit('update', {
+                    cmd : 'leave chat',
+                    chat : chat.key
+                })
+                d.dialog("destroy")
+                d.remove()
+            }
+        })
+        d.dialog('option', 'width', 400)
+        d.dialog('option', 'height', 500)
+        d.dialog('option', 'position', [250 + Math.floor(Math.random() * 100), Math.floor(Math.random() * 100)])
+    }
+    
+    d.empty()
+    
+    var t
+    d.append(t = $('<table class="fill"><tr height="100%"><td class="1" colspan="2"></td></tr><tr><td class="2" width="100%"></td><td class="3"></td></tr><tr><td class="4" colspan="2"></td></tr></table>'))
+    
+    function drawMessage(m) {
+        var d = $('<div/>')
+        if (m.username) {
+            d.append($('<span style="font-weight:bold"/>').text(m.username))
+            d.append($('<span/>').text(' : '))
+            d.append($('<span/>').text(m.text))
+        } else {
+            d.append($('<span style="font-weight:bold"/>').text(m.text))
+        }
+        return d
+    }
+    
+    var messages
+    t.find('.1').append(messages = $('<div class="fill" style="overflow:auto"/>'))
+    var ms = []
+    foreach(chat.messages, function (m) { ms.push(m) })
+    sort(ms, function (e) { return e.time })
+    foreach(ms, function (e) {
+        messages.append(drawMessage(e))
+    })
+    
+    function send() {
+        socket.emit('update', {
+            cmd : 'send message',
+            chat : chat.key,
+            message : t.find('.message').val()
+        })
+    }
+    
+    var i
+    t.find('.2').append($('<div/>').append(i = $('<input class="message" type="text" style="width:100%"/>')))
+    i.keydown(function (e) {
+        if (e.keyCode == 13) {
+            send()
+        }
+    })
+    t.find('.3').append($('<div/>').append($('<button/>').text('send').click(send)))
+    
+    function formatTime(t) {
+        var sec = 1000
+        var min = 60 * sec
+        var hour = 60 * min
+        
+        var hours = Math.floor(t / hour)
+        var mins = Math.floor((t % hour) / min)
+        var secs = Math.floor((t % min) / sec)
+        
+        function doubleZero(n) {
+            return (n < 10 ? "0" : "") + n
+        }
+        
+        if (hours == 0)
+            if (mins == 0)
+                return secs + " seconds"
+            else
+                return mins + " minutes, " + secs + " seconds"
+        else
+            return hours + " hours, " + mins + " minutes, " + secs + " seconds"
+    }
+    var timeDisplay = $('<span/>').text('')
+    t.find('.4').append($('<div style="font-size:small"/>').text('chat time ').append(timeDisplay))
+    function updateTime() {
+        var now = (time() + serverTimeDelta)
+        timeDisplay.text(formatTime(now - chat.time))
+    }
+    updateTime()
+    var ti = setInterval(function () {
+        if (isAttached(timeDisplay)) {
+            updateTime()
+        } else {
+            clearInterval(ti)
+        }
+    }, 300)
+    
+    if (!g_chatSizes[chat.key] || ms.length > g_chatSizes[chat.key]) {
+        g_chatSizes[chat.key] = ms.length
+        messages.scrollTop(messages[0].scrollHeight + 1000)
+        notifyUser('new chat message')
+    }
+    
+    setTimeout(function () {
+        i.focus()
+    }, 0)
+}
+
+function redrawMain() {
+    var d = $('.main')
+    if (d.length == 0) {
+        d = $('<div class="main" />')
+        $('body').append(d)
+    }
+    d.empty()
+    
+    d.append(drawUsers(db.users))
+    
+    var u = db.users[db.me]
+    foreach(u.chats, function (_, k) {
+        var c = db.chats[k]
+        redrawChat(c)
+    })
+}
+
+var serverTimeDelta = 0
+
+function runSocket() {
+    socket = io.connect('/')
+    socket.on('connect', function () {
+        socket.emit('channel', { channel : 'pomhire2' }, function () {
+        })
+    })
+    socket.on('update', function (o) {
+        serverTimeDelta = o.time - time()
+        
+        if (o.reload) {
+            window.location.reload()
+            return
+        }
+            
+        if (o.cmd == 'refresh') {
+            db = o.db
+        } else if (o.cmd == 'update') {
+            deepMerge(db, o.db)
+        }
+        redrawMain()
+    })
+    socket.on('disconnect', function () {
+        showDialog($('<div style="padding:20px;width:350px"/>').html('Disconnected. Try reloading page.<br/>(NOTE: You may have openned this site in another tab. You can only have it open in one tab.)'))
+        notifyUser('disconnected')
+    })
+}
+
+$(function () {
+    hasFocus = true
+    $(window).focus(function (e) {
+        hasFocus = true
+    }).blur(function (e) {
+        hasFocus = false
+    })
+        
+    db = {}
+    params = getUrlParams()
+    $('body').empty()
+    runSocket()
+})
+
+</script>
+
+</body>
+</html>
+
