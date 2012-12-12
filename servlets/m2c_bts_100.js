@@ -15,37 +15,39 @@ if (!db.version || db.version < 21) {
     var questionToQuestion = {}
     var turkToUser = {}
     
-    foreach(global.db.m2c_experiment.results, function (r) {
-        var q = questionToQuestion[r.question]
-        if (!q) {
-            q = newObj('question')
-            q.text = r.question
-            q.answerCounts = {}
-            q._answers = {}
-            q.guessNum = 0
-            q.guessDen = 0
-            questionToQuestion[r.question] = q
-            db.questions.push(q)
-        }
-        
-        var u = null
-        if (r.workerId) {
-            u = turkToUser[r.workerId]
-            if (!u) {
-                u = newObj('user')
-                u.turkId = r.workerId
-                turkToUser[r.workerId] = u
+    if (global.db.m2c_experiment) {
+        foreach(global.db.m2c_experiment.results, function (r) {
+            var q = questionToQuestion[r.question]
+            if (!q) {
+                q = newObj('question')
+                q.text = r.question
+                q.answerCounts = {}
+                q._answers = {}
+                q.guessNum = 0
+                q.guessDen = 0
+                questionToQuestion[r.question] = q
+                db.questions.push(q)
             }
-        }
-        
-        try {
-            answerQuestion(u, q, r.answer, (1 * r.percent.match(/\d+/)[0]) / 100)
-        } catch (e) {
-            console.log("----------")
-            console.log("r = " + json(r) + "\n" + json(q._answers[u.key]))
-            console.log("----------")
-        }
-    })
+            
+            var u = null
+            if (r.workerId) {
+                u = turkToUser[r.workerId]
+                if (!u) {
+                    u = newObj('user')
+                    u.turkId = r.workerId
+                    turkToUser[r.workerId] = u
+                }
+            }
+            
+            try {
+                answerQuestion(u, q, r.answer, (1 * r.percent.match(/\d+/)[0]) / 100)
+            } catch (e) {
+                console.log("----------")
+                console.log("r = " + json(r) + "\n" + json(q._answers[u.key]))
+                console.log("----------")
+            }
+        })
+    }
 }
 
 function pruneCopy(o, depth) {
