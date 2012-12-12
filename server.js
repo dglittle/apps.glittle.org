@@ -220,6 +220,7 @@ Fiber(function () {
             var postData = (req.method == 'POST') ? consume(req) : null
             if (postData) {
                 merge(q, querystring.parse(postData))
+                q.postData = postData
             }
             
             q.session = getSession(req)
