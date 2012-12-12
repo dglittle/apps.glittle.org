@@ -182,7 +182,7 @@ Fiber(function () {
         return json(decycle(db), "    ")
     })
     registerAdmin("/admin/eval", function (q) {
-        return eval(q.code)
+        // return eval(q.code)
     })
     
     register("/admin/alive", function (q) {
