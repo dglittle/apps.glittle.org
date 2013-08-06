@@ -53,7 +53,6 @@ function drawMain() {
     s = s.replace(/\[\[(.*?) (\S+?)\]\]/g, function (g0, g1, g2) {
         return '<a href="' + g2 + '">' + g1 + '</a>'
     })
-    s = s.replace(/##signup##/, '<span id="signup"></span>')
     s = map(filter(lines(s), function (s) { return s }), function (s) {
         if (s.match(/^\*/)) {
             return '<ul><li>' + s.slice(2) + '</li></ul>'
@@ -62,25 +61,6 @@ function drawMain() {
         }
     }).join('')
     d.append($('<div/>').html(s))
-    
-    var dd = $('<span/>')
-    dd.append($('<input type="text" value="enter e-mail address"></input>').click(function () {
-        $(this).select()
-    }))
-    dd.append($('<button>submit</button>').click(function () {
-        var s = dd.find('input').val()
-        
-        if (!s.match(/@/)) {
-            alert("Please provide an e-mail address, thanks!")
-            return
-        }
-        
-        dd.empty().append($('<span/>').text('Submitting...'))
-        $.post(window.location.url, { s : s }, function () {
-            dd.empty().append($('<span/>').html('Submitted. Thanks again. We\'ll let you know when the experiment is ready.'))
-        })
-    }))
-    d.find('#signup').append(dd)
     
     d.append($('<div/>').text('Thanks!'))
     d.append($('<div/>').text('Greg'))
@@ -107,10 +87,7 @@ I am [[Greg Little http://glittle.org]], a [[researcher at oDesk https://www.ode
 
 This is a research experiment to explore a form of real-time expertise hiring -- [[pomodoro http://en.wikipedia.org/wiki/Pomodoro_Technique]] hiring -- where people hire experts in 20 minute chunks. For example, someone might hire an expert to help write a JavaScript utility function, plot some data, or sketch a cartoon.
 
-If you're interested in participating (as an expert or requester):
-
-* ##signup##
-* Please share this link, so we can get a good pool of experts for the experiment.
+Unfortunately, I ran into some snags with my initial attempts at this idea. I hope to rekindle the project in the future, but I'm taking down the widget for signing up to hear more, since I already feel bad for not having had anything to tell the people who already signed up.
 </pre>
 
 </body>
